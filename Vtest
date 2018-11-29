@@ -1,0 +1,82 @@
+from keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
+from keras.models import Sequential
+from keras.layers import Dropout, Flatten, Dense
+from keras import applications, optimizers
+from keras.utils.np_utils import to_categorical
+import numpy as np
+import cv2
+import argparse
+import os
+import random
+import sys
+import threading
+
+label = ''
+frame = None
+top_model_weights_path = 'my_model_XB.h5'
+class_dictionary = np.load('class_indices_XB.npy').item()
+num_classes = len(class_dictionary)
+
+class MyThread(threading.Thread):
+	def __init__(self):
+		threading.Thread.__init__(self)
+
+	def pre(self, frame):
+		image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB).astype(np.float32)
+		image = image.transpose((2, 0, 1))
+		image = image.reshape((1,) + image.shape)
+
+	def run(self):
+		global label
+		# Load the VGG16 network
+		print("[INFO] loading network...")
+		self.model = applications.Xception(include_top=False, weights="imagenet")
+
+	def top(self):
+		self.model = Sequential()
+    		self.model.add(Flatten(input_shape=bottleneck_prediction.shape[1:]))
+    		self.model.add(Dense(256, activation='relu'))
+    		self.model.add(Dropout(0.5))
+    		self.model.add(Dense(256, activation='relu'))
+    		self.model.add(Dropout(0.5))
+    		self.model.add(Dense(num_classes, activation='softmax'))
+
+    		self.model.load_weights(top_model_weights_path)
+
+		while (~(frame is None)):
+			(inID, label) = self.labelling(frame)
+
+	def labelling(self, frame):
+		bottleneck_prediction = self.run.model.predict(frame)
+		class_predicted = self.top.model.predict_classes(bottleneck_prediction)
+    		probabilities = self.top.model.predict_proba(bottleneck_prediction)
+    		inID = class_predicted[0]
+    		inv_map = {v: k for k, v in class_dictionary.items()}
+    		label = inv_map[inID]
+
+cap = cv2.VideoCapture(0)
+if (cap.isOpened()):
+	print("Camera OK")
+else:
+	cap.open()
+
+keras_thread = MyThread()
+keras_thread.start()
+
+while (True):
+	ret, original = cap.read()
+
+	frame = cv2.resize(original, (224, 224))
+
+	# Display the predictions
+	# print("ImageNet ID: {}, Label: {}".format(inID, label))
+	cv2.putText(original, "Label: {}".format(label), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+	cv2.imshow("Classification", original)
+
+	if (cv2.waitKey(1) & 0xFF == ord('q')):
+		break;
+
+cap.release()
+frame = None
+cv2.destroyAllWindows()
+sys.exit()
